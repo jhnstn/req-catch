@@ -1,8 +1,10 @@
 # Req Catch
 
 Catch a Request by its toe,
+
 It won't holler 
-but will log to console
+
+But will log to console,
 
 ## Features
 
