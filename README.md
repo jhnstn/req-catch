@@ -1,6 +1,8 @@
 # Req Catch
 
-A simple Express server that catches HTTP requests and can serve mock responses based on URL patterns.
+Catch a Request by its toe,
+It won't holler 
+but will log to console
 
 ## Features
 
