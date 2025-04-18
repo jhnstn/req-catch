@@ -4,7 +4,7 @@ Catch a Request by its toe,
 
 It won't holler 
 
-But will log to console,
+Just log to console,
 
 ## Features
 
