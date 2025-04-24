@@ -13,6 +13,7 @@ Just log to console,
 - Supports URL path and query parameter matching
 - CORS enabled for cross-origin requests
 - Force specific HTTP status codes using the `_return` parameter
+- Simulate network latency using the `_delay` parameter
 
 ## Installation
 
@@ -89,3 +90,33 @@ When the `_return` parameter is present, the server will:
 1. Return a response with the specified status code
 2. Include a JSON body with a message indicating the forced status code
 3. Skip the normal mock file lookup process
+
+## Simulating Network Latency
+
+You can simulate network latency or slow server responses by adding the `_delay` parameter to the URL. This is useful for testing loading states, timeouts, and other timing-related behaviors in client applications.
+
+### Usage
+
+Add the `_delay` parameter to the URL with the desired delay in milliseconds:
+
+```
+/api/endpoint?_delay=2000
+```
+
+### Examples
+
+| Request URL | Response Behavior |
+|-------------|-------------------|
+| `/users?_delay=1000` | Response delayed by 1 second |
+| `/products/123?_delay=3000` | Response delayed by 3 seconds |
+| `/orders?status=pending&_delay=5000` | Response delayed by 5 seconds |
+
+### Combining Parameters
+
+You can combine the `_delay` parameter with the `_return` parameter to simulate slow error responses:
+
+```
+/api/endpoint?_delay=2000&_return=500
+```
+
+This will delay the response by 2 seconds and then return a 500 status code.

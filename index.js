@@ -55,6 +55,20 @@ const extractReturnParam = (queryString) => {
     return null;
 };
 
+// Function to extract _delay parameter from query string
+const extractDelayParam = (queryString) => {
+    if (!queryString) return null;
+
+    const params = queryString.split('&');
+    for (const param of params) {
+        if (param.startsWith('_delay=')) {
+            const delay = parseInt(param.split('=')[1], 10);
+            return isNaN(delay) ? null : delay;
+        }
+    }
+    return null;
+};
+
 // Function to convert URL to filename
 const urlToFilename = (url) => {
     // Split URL into path and query parts
@@ -85,103 +99,191 @@ const urlToFilename = (url) => {
 
 // Mock response handler for GET requests
 app.get("*", (req, res) => {
-    // Check for _return parameter
+    // Extract query string
     const [_, queryString] = req.url.split('?');
+
+    // Check for _delay parameter
+    const delayMs = extractDelayParam(queryString);
+
+    // Check for _return parameter
     const returnStatusCode = extractReturnParam(queryString);
 
-    if (returnStatusCode) {
-        console.log(chalk.yellow.bold(`Found _return parameter with status code: ${chalk.cyan(returnStatusCode)}`));
-        return res.status(returnStatusCode).json({
-            message: `Forced response with status code ${returnStatusCode}`,
-            originalUrl: req.url
-        });
-    }
-
-    // Convert URL to filename
-    const mockFilename = urlToFilename(req.url);
-    const mockFilePath = path.join(__dirname, 'mocks', mockFilename);
-
-    console.log(chalk.yellow.bold(`Looking for mock file: ${chalk.cyan(mockFilename)}`));
-
-    // Check if mock file exists
-    fs.access(mockFilePath, fs.constants.F_OK, (err) => {
-        if (err) {
-            // File doesn't exist
-            console.log(chalk.red.bold(`Mock file not found: ${chalk.cyan(mockFilename)}`));
-            return res.status(404).json({ error: "Not found" });
+    // Function to send the response (used for both immediate and delayed responses)
+    const sendResponse = () => {
+        if (returnStatusCode) {
+            console.log(chalk.yellow.bold(`Found _return parameter with status code: ${chalk.cyan(returnStatusCode)}`));
+            return res.status(returnStatusCode).json({
+                message: `Forced response with status code ${returnStatusCode}`,
+                originalUrl: req.url
+            });
         }
 
-        // Read and return the mock file
-        fs.readFile(mockFilePath, 'utf8', (err, data) => {
+        // Convert URL to filename
+        const mockFilename = urlToFilename(req.url);
+        const mockFilePath = path.join(__dirname, 'mocks', mockFilename);
+
+        console.log(chalk.yellow.bold(`Looking for mock file: ${chalk.cyan(mockFilename)}`));
+
+        // Check if mock file exists
+        fs.access(mockFilePath, fs.constants.F_OK, (err) => {
             if (err) {
-                console.log(chalk.red.bold(`Error reading mock file: ${chalk.cyan(mockFilename)}`));
-                return res.status(500).json({ error: "Server error" });
+                // File doesn't exist
+                console.log(chalk.red.bold(`Mock file not found: ${chalk.cyan(mockFilename)}`));
+                return res.status(404).json({ error: "Not found" });
             }
 
-            try {
-                // Parse JSON content
-                const jsonData = JSON.parse(data);
-                console.log(chalk.green.bold(`Serving mock response from: ${chalk.cyan(mockFilename)}`));
-                res.json(jsonData);
-            } catch (e) {
-                console.log(chalk.red.bold(`Invalid JSON in mock file: ${chalk.cyan(mockFilename)}`));
-                res.status(500).json({ error: "Invalid mock data" });
-            }
+            // Read and return the mock file
+            fs.readFile(mockFilePath, 'utf8', (err, data) => {
+                if (err) {
+                    console.log(chalk.red.bold(`Error reading mock file: ${chalk.cyan(mockFilename)}`));
+                    return res.status(500).json({ error: "Server error" });
+                }
+
+                try {
+                    // Parse JSON content
+                    const jsonData = JSON.parse(data);
+                    console.log(chalk.green.bold(`Serving mock response from: ${chalk.cyan(mockFilename)}`));
+                    res.json(jsonData);
+                } catch (e) {
+                    console.log(chalk.red.bold(`Invalid JSON in mock file: ${chalk.cyan(mockFilename)}`));
+                    res.status(500).json({ error: "Invalid mock data" });
+                }
+            });
         });
-    });
+    };
+
+    // If delay parameter is present, wait for the specified time before sending the response
+    if (delayMs) {
+        const delaySeconds = (delayMs / 1000).toFixed(1);
+        console.log(chalk.yellow.bold(`Found _delay parameter, delaying response by ${chalk.cyan(delayMs)}ms (${chalk.cyan(delaySeconds)} seconds)`));
+        console.log(chalk.yellow(`Delaying request for ${chalk.cyan(delaySeconds)} seconds...`));
+        setTimeout(() => {
+            console.log(chalk.green(`Delay complete, sending response now`));
+            sendResponse();
+        }, delayMs);
+    } else {
+        // Otherwise, send the response immediately
+        sendResponse();
+    }
 });
 
 // Handler for PUT requests
 app.put("*", (req, res) => {
-    // Check for _return parameter
+    // Extract query string
     const [_, queryString] = req.url.split('?');
+
+    // Check for _delay parameter
+    const delayMs = extractDelayParam(queryString);
+
+    // Check for _return parameter
     const returnStatusCode = extractReturnParam(queryString);
 
-    if (returnStatusCode) {
-        console.log(chalk.yellow.bold(`Found _return parameter with status code: ${chalk.cyan(returnStatusCode)}`));
-        return res.status(returnStatusCode).json({
-            message: `Forced response with status code ${returnStatusCode}`,
-            originalUrl: req.url
-        });
-    }
+    // Function to send the response
+    const sendResponse = () => {
+        if (returnStatusCode) {
+            console.log(chalk.yellow.bold(`Found _return parameter with status code: ${chalk.cyan(returnStatusCode)}`));
+            return res.status(returnStatusCode).json({
+                message: `Forced response with status code ${returnStatusCode}`,
+                originalUrl: req.url
+            });
+        }
 
-    console.log(chalk.green.bold(`Handling PUT request to ${chalk.yellow(req.url)}`));
-    res.sendStatus(200);
+        console.log(chalk.green.bold(`Handling PUT request to ${chalk.yellow(req.url)}`));
+        res.sendStatus(200);
+    };
+
+    // If delay parameter is present, wait for the specified time before sending the response
+    if (delayMs) {
+        const delaySeconds = (delayMs / 1000).toFixed(1);
+        console.log(chalk.yellow.bold(`Found _delay parameter, delaying response by ${chalk.cyan(delayMs)}ms (${chalk.cyan(delaySeconds)} seconds)`));
+        console.log(chalk.yellow(`Delaying request for ${chalk.cyan(delaySeconds)} seconds...`));
+        setTimeout(() => {
+            console.log(chalk.green(`Delay complete, sending response now`));
+            sendResponse();
+        }, delayMs);
+    } else {
+        // Otherwise, send the response immediately
+        sendResponse();
+    }
 });
 
 // Handler for DELETE requests
 app.delete("*", (req, res) => {
-    // Check for _return parameter
+    // Extract query string
     const [_, queryString] = req.url.split('?');
+
+    // Check for _delay parameter
+    const delayMs = extractDelayParam(queryString);
+
+    // Check for _return parameter
     const returnStatusCode = extractReturnParam(queryString);
 
-    if (returnStatusCode) {
-        console.log(chalk.yellow.bold(`Found _return parameter with status code: ${chalk.cyan(returnStatusCode)}`));
-        return res.status(returnStatusCode).json({
-            message: `Forced response with status code ${returnStatusCode}`,
-            originalUrl: req.url
-        });
-    }
+    // Function to send the response
+    const sendResponse = () => {
+        if (returnStatusCode) {
+            console.log(chalk.yellow.bold(`Found _return parameter with status code: ${chalk.cyan(returnStatusCode)}`));
+            return res.status(returnStatusCode).json({
+                message: `Forced response with status code ${returnStatusCode}`,
+                originalUrl: req.url
+            });
+        }
 
-    console.log(chalk.green.bold(`Handling DELETE request to ${chalk.yellow(req.url)}`));
-    res.sendStatus(200);
+        console.log(chalk.green.bold(`Handling DELETE request to ${chalk.yellow(req.url)}`));
+        res.sendStatus(200);
+    };
+
+    // If delay parameter is present, wait for the specified time before sending the response
+    if (delayMs) {
+        const delaySeconds = (delayMs / 1000).toFixed(1);
+        console.log(chalk.yellow.bold(`Found _delay parameter, delaying response by ${chalk.cyan(delayMs)}ms (${chalk.cyan(delaySeconds)} seconds)`));
+        console.log(chalk.yellow(`Delaying request for ${chalk.cyan(delaySeconds)} seconds...`));
+        setTimeout(() => {
+            console.log(chalk.green(`Delay complete, sending response now`));
+            sendResponse();
+        }, delayMs);
+    } else {
+        // Otherwise, send the response immediately
+        sendResponse();
+    }
 });
 
 // Fallback route for other non-GET/PUT/DELETE requests
 app.all("*", (req, res) => {
-    // Check for _return parameter
+    // Extract query string
     const [_, queryString] = req.url.split('?');
+
+    // Check for _delay parameter
+    const delayMs = extractDelayParam(queryString);
+
+    // Check for _return parameter
     const returnStatusCode = extractReturnParam(queryString);
 
-    if (returnStatusCode) {
-        console.log(chalk.yellow.bold(`Found _return parameter with status code: ${chalk.cyan(returnStatusCode)}`));
-        return res.status(returnStatusCode).json({
-            message: `Forced response with status code ${returnStatusCode}`,
-            originalUrl: req.url
-        });
-    }
+    // Function to send the response
+    const sendResponse = () => {
+        if (returnStatusCode) {
+            console.log(chalk.yellow.bold(`Found _return parameter with status code: ${chalk.cyan(returnStatusCode)}`));
+            return res.status(returnStatusCode).json({
+                message: `Forced response with status code ${returnStatusCode}`,
+                originalUrl: req.url
+            });
+        }
 
-    res.send("Request received. Check the server logs.");
+        res.send("Request received. Check the server logs.");
+    };
+
+    // If delay parameter is present, wait for the specified time before sending the response
+    if (delayMs) {
+        const delaySeconds = (delayMs / 1000).toFixed(1);
+        console.log(chalk.yellow.bold(`Found _delay parameter, delaying response by ${chalk.cyan(delayMs)}ms (${chalk.cyan(delaySeconds)} seconds)`));
+        console.log(chalk.yellow(`Delaying request for ${chalk.cyan(delaySeconds)} seconds...`));
+        setTimeout(() => {
+            console.log(chalk.green(`Delay complete, sending response now`));
+            sendResponse();
+        }, delayMs);
+    } else {
+        // Otherwise, send the response immediately
+        sendResponse();
+    }
 });
 
 app.listen(port, () => {
