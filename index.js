@@ -10,7 +10,7 @@ const port = process.argv[2] || 3000;
 // CORS middleware to allow cross-origin requests from the specified origin
 app.use((req, res, next) => {
     res.header("Access-Control-Allow-Origin", "*");
-    res.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
     res.header("Access-Control-Allow-Headers", "Content-Type");
 
     // Handle OPTIONS requests
@@ -40,6 +40,20 @@ app.use((req, res, next) => {
     }
     next();
 });
+
+// Function to extract _return parameter from query string
+const extractReturnParam = (queryString) => {
+    if (!queryString) return null;
+
+    const params = queryString.split('&');
+    for (const param of params) {
+        if (param.startsWith('_return=')) {
+            const statusCode = parseInt(param.split('=')[1], 10);
+            return isNaN(statusCode) ? null : statusCode;
+        }
+    }
+    return null;
+};
 
 // Function to convert URL to filename
 const urlToFilename = (url) => {
@@ -71,6 +85,18 @@ const urlToFilename = (url) => {
 
 // Mock response handler for GET requests
 app.get("*", (req, res) => {
+    // Check for _return parameter
+    const [_, queryString] = req.url.split('?');
+    const returnStatusCode = extractReturnParam(queryString);
+
+    if (returnStatusCode) {
+        console.log(chalk.yellow.bold(`Found _return parameter with status code: ${chalk.cyan(returnStatusCode)}`));
+        return res.status(returnStatusCode).json({
+            message: `Forced response with status code ${returnStatusCode}`,
+            originalUrl: req.url
+        });
+    }
+
     // Convert URL to filename
     const mockFilename = urlToFilename(req.url);
     const mockFilePath = path.join(__dirname, 'mocks', mockFilename);
@@ -105,8 +131,56 @@ app.get("*", (req, res) => {
     });
 });
 
-// Fallback route for non-GET requests
+// Handler for PUT requests
+app.put("*", (req, res) => {
+    // Check for _return parameter
+    const [_, queryString] = req.url.split('?');
+    const returnStatusCode = extractReturnParam(queryString);
+
+    if (returnStatusCode) {
+        console.log(chalk.yellow.bold(`Found _return parameter with status code: ${chalk.cyan(returnStatusCode)}`));
+        return res.status(returnStatusCode).json({
+            message: `Forced response with status code ${returnStatusCode}`,
+            originalUrl: req.url
+        });
+    }
+
+    console.log(chalk.green.bold(`Handling PUT request to ${chalk.yellow(req.url)}`));
+    res.sendStatus(200);
+});
+
+// Handler for DELETE requests
+app.delete("*", (req, res) => {
+    // Check for _return parameter
+    const [_, queryString] = req.url.split('?');
+    const returnStatusCode = extractReturnParam(queryString);
+
+    if (returnStatusCode) {
+        console.log(chalk.yellow.bold(`Found _return parameter with status code: ${chalk.cyan(returnStatusCode)}`));
+        return res.status(returnStatusCode).json({
+            message: `Forced response with status code ${returnStatusCode}`,
+            originalUrl: req.url
+        });
+    }
+
+    console.log(chalk.green.bold(`Handling DELETE request to ${chalk.yellow(req.url)}`));
+    res.sendStatus(200);
+});
+
+// Fallback route for other non-GET/PUT/DELETE requests
 app.all("*", (req, res) => {
+    // Check for _return parameter
+    const [_, queryString] = req.url.split('?');
+    const returnStatusCode = extractReturnParam(queryString);
+
+    if (returnStatusCode) {
+        console.log(chalk.yellow.bold(`Found _return parameter with status code: ${chalk.cyan(returnStatusCode)}`));
+        return res.status(returnStatusCode).json({
+            message: `Forced response with status code ${returnStatusCode}`,
+            originalUrl: req.url
+        });
+    }
+
     res.send("Request received. Check the server logs.");
 });
 
