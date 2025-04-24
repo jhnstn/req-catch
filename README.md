@@ -2,7 +2,7 @@
 
 Catch a Request by its toe,
 
-It won't holler 
+It won't holler
 
 Just log to console,
 
@@ -12,6 +12,7 @@ Just log to console,
 - Serves mock JSON responses for GET requests based on URL patterns
 - Supports URL path and query parameter matching
 - CORS enabled for cross-origin requests
+- Force specific HTTP status codes using the `_return` parameter
 
 ## Installation
 
@@ -63,3 +64,28 @@ The server can serve mock JSON responses for GET requests. It works by convertin
 - If a matching mock file is found, its contents are returned with a 200 status code
 - If no matching file is found, a 404 error is returned
 - If the mock file contains invalid JSON, a 500 error is returned
+
+## Forcing Status Codes
+
+You can force the server to return a specific HTTP status code by adding the `_return` parameter to the URL. This is useful for testing error handling in client applications without having to create specific mock files.
+
+### Usage
+
+Add the `_return` parameter to the URL with the desired status code:
+
+```
+/api/endpoint?_return=500
+```
+
+### Examples
+
+| Request URL | Response |
+|-------------|----------|
+| `/users?_return=404` | 404 Not Found response |
+| `/products/123?_return=500` | 500 Internal Server Error response |
+| `/orders?status=pending&_return=401` | 401 Unauthorized response |
+
+When the `_return` parameter is present, the server will:
+1. Return a response with the specified status code
+2. Include a JSON body with a message indicating the forced status code
+3. Skip the normal mock file lookup process
